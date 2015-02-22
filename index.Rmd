@@ -1,0 +1,91 @@
+---
+title: "Workout Prediction"
+author: "Mohan"
+date: "February 22, 2015"
+output: html_document
+---
+
+# Executive Summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project we will use data from accelerometers placed on the belt, forearm, arm, and dumbell of six participants to predict how well they were doing the exercise in terms of the classification in the data. 
+
+
+# Data
+We are using data available from this source: http://groupware.les.inf.puc-rio.br/har.
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+
+#### Libraries
+The following libraries were used.
+```{r message=FALSE}
+library(caret)
+library(randomForest)
+```
+
+
+```{r}
+set.seed(12345)
+```
+
+#### Processing data
+Here we are loading the data directy and fitering NA.
+```{r}
+training0 <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"), na.strings=c("NA"," ",""))
+```
+
+We are filtering out the NAs and stripping other columns.
+```{r}
+# clean the data
+training1 <- apply(training0, 2, function(x) {sum(is.na(x))})
+training <- training0[,which(training1 == 0)]
+training <- training[8:length(training)]
+
+```
+
+#### Modelling
+Creating training and test data from the given data by using 70% for training and 30% for validation.  A random forest model was selected as it can better handle unbalanced data sets.
+```{r}
+inTrain <- createDataPartition(y=training$classe, p=0.7, list=FALSE)
+trainData <- training[inTrain, ]
+testData <- training[-inTrain, ]
+
+modelFit <- randomForest(classe ~ ., data = trainData)
+modelFit
+```
+
+As you can see, the OOB estimate of error rate is 0.5%. 
+
+#### Validation
+Let us now apply the validation data that we created earlier and check with the confusion matrix.
+```{r}
+modelPred <- predict(modelFit, testData)
+confusionMatrix(testData$classe, modelPred)
+```
+We got an accuracy of about 99.3% which is very good.
+
+
+#### Prediction
+Now lets load the test data and try to predict for the 20 test cases.
+
+We load the data and apply the same transformation to remove NAs and other non-significant columns.
+```{r}
+sample0 <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"), na.strings=c("NA"," ",""))
+sample1 <- apply(sample0, 2, function(x) {sum(is.na(x))})
+sample <- sample0[,which(sample1 == 0)]
+sample <- sample[8:length(sample)]
+```
+
+Now lets predict against this data
+```{r}
+modelPredSample <- predict(modelFit,sample)
+modelPredSample
+```
+
+# Conclusion
+Using Random Forest modelling, we were able to predict the manner in which the users did the exercise.
